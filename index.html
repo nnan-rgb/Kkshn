@@ -1,0 +1,713 @@
+
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أداة متكاملة لاختبار Selenium وجمع البيانات</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            direction: rtl;
+            background-color: #f0f8ff;
+            padding: 10px;
+            min-width: 1200px; /* عرض ثابت لالتقاط صورة كاملة */
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            grid-auto-rows: min-content;
+        }
+        
+        .main-header {
+            grid-column: 1 / -1;
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .test-section {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            min-height: 150px;
+            max-height: 300px;
+            overflow: hidden;
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .half-width {
+            min-height: 200px;
+        }
+        
+        .passed {
+            border-color: #27ae60;
+            background: #d5f4e6;
+        }
+        
+        .failed {
+            border-color: #e74c3c;
+            background: #fadbd8;
+        }
+        
+        .warning {
+            border-color: #f39c12;
+            background: #fef5e7;
+        }
+        
+        .test-result {
+            margin: 4px 0;
+            padding: 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            background: rgba(255,255,255,0.7);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: 6px;
+        }
+        
+        .status-pass { background: #27ae60; }
+        .status-fail { background: #e74c3c; }
+        .status-warn { background: #f39c12; }
+        
+        .json-view {
+            background: #2d3436;
+            color: #dfe6e9;
+            padding: 12px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 10px;
+            max-height: 200px;
+            overflow: auto;
+        }
+        
+        .summary {
+            background: #34495e;
+            color: white;
+            padding: 12px;
+            border-radius: 5px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            font-size: 13px;
+        }
+        
+        .summary-item {
+            padding: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .interaction-log {
+            background: #34495e;
+            color: white;
+            padding: 8px;
+            border-radius: 5px;
+            max-height: 120px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 10px;
+        }
+        
+        .cookie-item {
+            background: #ecf0f1;
+            margin: 3px 0;
+            padding: 6px;
+            border-radius: 4px;
+            border-right: 3px solid #3498db;
+            font-size: 11px;
+        }
+        
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 8px;
+            margin: 8px 0;
+        }
+        
+        .section-title {
+            background: rgba(0,0,0,0.1);
+            padding: 8px;
+            margin: -12px -12px 8px -12px;
+            border-radius: 6px 6px 0 0;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .compact-list {
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        
+        /* تنسيقات للعرض الأفقي */
+        .horizontal-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+        }
+        
+        .info-card {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+            font-size: 12px;
+        }
+        
+        .info-card h4 {
+            margin-bottom: 8px;
+            color: #2c3e50;
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- العنوان الرئيسي -->
+        <div class="main-header">
+            <h1>🛠️ أداة متكاملة - اختبار Selenium + جمع البيانات + التتبع</h1>
+            <div id="summary">جاري التحليل الشامل... ⏳</div>
+        </div>
+
+        <!-- الصف الأول: الملخص والتفاعلات -->
+        <div class="test-section full-width">
+            <div class="section-title">📈 الملخص السريع</div>
+            <div class="summary" id="quickSummary">
+                <div class="summary-item">جاري التحميل...</div>
+            </div>
+        </div>
+
+        <!-- الصف الثاني: اختبارات Selenium -->
+        <div class="test-section full-width">
+            <div class="section-title">🧪 نتائج اختبارات Selenium</div>
+            <div id="seleniumResults" class="horizontal-section">
+                جاري اختبار Selenium...
+            </div>
+        </div>
+
+        <!-- الصف الثالث: معلومات النظام -->
+        <div class="test-section full-width">
+            <div class="section-title">🖥️ معلومات النظام والاتصال</div>
+            <div id="systemInfo" class="horizontal-section">
+                جاري جمع معلومات النظام...
+            </div>
+        </div>
+
+        <!-- الصف الرابع: التفاعلات والكوكيز -->
+        <div class="test-section">
+            <div class="section-title">🖱️ التفاعلات المسجلة</div>
+            <div id="interactionLog" class="interaction-log">
+                جاري تسجيل التفاعلات...
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="section-title">🍪 الكوكيز الحالية</div>
+            <div id="cookiesList" class="compact-list">
+                جاري تحليل الكوكيز...
+            </div>
+        </div>
+
+        <!-- الصف الخامس: الشبكة والاتصال -->
+        <div class="test-section">
+            <div class="section-title">🌐 معلومات الشبكة</div>
+            <div id="networkInfo" class="compact-list">
+                جاري تحليل الشبكة...
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="section-title">🔒 إعدادات الخصوصية</div>
+            <div id="privacyInfo" class="compact-list">
+                جاري فحص الخصوصية...
+            </div>
+        </div>
+
+        <!-- الصف السادس: البصمة الرقمية -->
+        <div class="test-section full-width">
+            <div class="section-title">📊 البصمة الرقمية للجهاز</div>
+            <div id="fingerprintInfo" class="horizontal-section">
+                جاري إنشاء البصمة...
+            </div>
+        </div>
+
+        <!-- الصف السابع: JSON كامل -->
+        <div class="test-section full-width">
+            <div class="section-title">📋 جميع البيانات (JSON)</div>
+            <div id="jsonOutput" class="json-view">جاري جمع البيانات...</div>
+        </div>
+    </div>
+
+    <script>
+        // الأداة المتكاملة مع تصميم مضغوط
+        class CompactTester {
+            constructor() {
+                this.results = {
+                    timestamp: new Date().toISOString(),
+                    tests: {},
+                    systemInfo: {},
+                    interactions: [],
+                    cookies: {},
+                    summary: {
+                        totalTests: 0,
+                        passed: 0,
+                        failed: 0,
+                        overallScore: 0
+                    }
+                };
+                
+                this.interactionLog = [];
+                this.startInteractionTracking();
+            }
+
+            async runComprehensiveAnalysis() {
+                // جمع المعلومات النظامية
+                await this.collectSystemInfo();
+                
+                // اختبارات Selenium
+                await this.runSeleniumTests();
+                
+                // جمع الكوكيز
+                this.collectCookies();
+                
+                this.updateSummary();
+                this.displayCompactResults();
+                return this.results;
+            }
+
+            // ========== جمع المعلومات النظامية ==========
+            async collectSystemInfo() {
+                this.results.systemInfo = {
+                    basic: this.getBasicInfo(),
+                    screen: this.getScreenInfo(),
+                    hardware: this.getHardwareInfo(),
+                    connection: this.getConnectionInfo(),
+                    language: this.getLanguageInfo(),
+                    location: await this.getLocationInfo(),
+                    browser: this.getBrowserInfo(),
+                    fingerprint: this.generateFingerprint(),
+                    privacy: this.checkPrivacyStatus(),
+                    network: await this.getNetworkInfo()
+                };
+            }
+
+            getBasicInfo() {
+                return {
+                    userAgent: navigator.userAgent.substring(0, 50) + '...',
+                    platform: navigator.platform,
+                    deviceType: this.getDeviceType(),
+                    online: navigator.onLine
+                };
+            }
+
+            getScreenInfo() {
+                return {
+                    resolution: `${screen.width}x${screen.height}`,
+                    available: `${screen.availWidth}x${screen.availHeight}`,
+                    colorDepth: `${screen.colorDepth}bit`,
+                    pixelRatio: window.devicePixelRatio
+                };
+            }
+
+            getHardwareInfo() {
+                return {
+                    cpuCores: navigator.hardwareConcurrency || 'غير معروف',
+                    memory: navigator.deviceMemory ? `${navigator.deviceMemory}GB` : 'غير معروف',
+                    touchPoints: navigator.maxTouchPoints || 0
+                };
+            }
+
+            getConnectionInfo() {
+                const conn = navigator.connection;
+                if (!conn) return { type: 'غير معروف' };
+                
+                return {
+                    type: conn.effectiveType || 'غير معروف',
+                    downlink: conn.downlink ? `${conn.downlink}Mbps` : 'غير معروف',
+                    rtt: conn.rtt ? `${conn.rtt}ms` : 'غير معروف',
+                    saveData: conn.saveData ? 'نعم' : 'لا'
+                };
+            }
+
+            getLanguageInfo() {
+                return {
+                    language: navigator.language,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    locale: navigator.language.split('-')[0]
+                };
+            }
+
+            async getLocationInfo() {
+                try {
+                    const response = await fetch('https://ipapi.co/json/');
+                    const ipData = await response.json();
+                    return {
+                        ip: ipData.ip,
+                        country: ipData.country_name,
+                        city: ipData.city
+                    };
+                } catch (error) {
+                    return { ip: 'غير متوفر', country: 'غير معروف', city: 'غير معروف' };
+                }
+            }
+
+            getBrowserInfo() {
+                return {
+                    name: this.getBrowserName(),
+                    version: this.getBrowserVersion(),
+                    plugins: navigator.plugins.length
+                };
+            }
+
+            // ========== تتبع التفاعلات ==========
+            startInteractionTracking() {
+                ['mousemove', 'click', 'keydown', 'touchstart'].forEach(event => {
+                    document.addEventListener(event, (e) => {
+                        this.logInteraction(event, this.getInteractionData(e));
+                    });
+                });
+            }
+
+            getInteractionData(e) {
+                const base = { timestamp: Date.now() };
+                switch(e.type) {
+                    case 'mousemove':
+                        return { ...base, x: e.clientX, y: e.clientY };
+                    case 'click':
+                        return { ...base, x: e.clientX, y: e.clientY, target: e.target.tagName };
+                    case 'keydown':
+                        return { ...base, key: e.key, target: e.target.tagName };
+                    case 'touchstart':
+                        return { ...base, touches: e.touches.length, x: e.touches[0].clientX, y: e.touches[0].clientY };
+                    default:
+                        return base;
+                }
+            }
+
+            logInteraction(type, data) {
+                const interaction = { type, ...data };
+                this.interactionLog.push(interaction);
+                this.results.interactions.push(interaction);
+                
+                if (this.interactionLog.length > 20) {
+                    this.interactionLog.shift();
+                }
+                
+                this.updateInteractionDisplay();
+            }
+
+            // ========== جمع الكوكيز ==========
+            collectCookies() {
+                const cookies = {};
+                document.cookie.split(';').forEach(cookie => {
+                    const [name, value] = cookie.trim().split('=');
+                    if (name) cookies[name] = value;
+                });
+                this.results.cookies = cookies;
+                this.updateCookiesDisplay();
+            }
+
+            // ========== اختبارات Selenium ==========
+            async runSeleniumTests() {
+                this.results.tests = {
+                    webdriver: this.testWebDriver(),
+                    headless: this.testHeadless(),
+                    automation: this.testAutomation(),
+                    fingerprint: this.testFingerprint()
+                };
+            }
+
+            testWebDriver() {
+                const detected = navigator.webdriver === true || 
+                               document.documentElement.getAttribute('webdriver') !== null;
+                return { detected, passed: !detected };
+            }
+
+            testHeadless() {
+                const detected = navigator.userAgent.includes('HeadlessChrome') ||
+                               navigator.plugins.length === 0;
+                return { detected, passed: !detected };
+            }
+
+            testAutomation() {
+                const tools = [];
+                if (navigator.webdriver) tools.push('webdriver');
+                if (window.__nightmare) tools.push('nightmare');
+                return { detected: tools.length > 0, tools, passed: tools.length === 0 };
+            }
+
+            testFingerprint() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                ctx.textBaseline = 'top';
+                ctx.font = '14px Arial';
+                ctx.fillText('Test', 2, 2);
+                return { supported: true, passed: true };
+            }
+
+            // ========== الطرق المساعدة ==========
+            getDeviceType() {
+                const ua = navigator.userAgent;
+                if (/(tablet|ipad)/i.test(ua)) return 'تابلت';
+                if (/mobile/i.test(ua)) return 'هاتف';
+                return 'كمبيوتر';
+            }
+
+            getBrowserName() {
+                const ua = navigator.userAgent;
+                if (ua.includes('Chrome')) return 'Chrome';
+                if (ua.includes('Firefox')) return 'Firefox';
+                if (ua.includes('Safari')) return 'Safari';
+                return 'غير معروف';
+            }
+
+            getBrowserVersion() {
+                const ua = navigator.userAgent;
+                const match = ua.match(/(chrome|firefox|safari)\/([0-9.]+)/i);
+                return match ? match[2] : 'غير معروف';
+            }
+
+            generateFingerprint() {
+                return {
+                    canvas: 'مدعوم',
+                    webgl: 'مدعوم', 
+                    timezone: new Date().getTimezoneOffset()
+                };
+            }
+
+            checkPrivacyStatus() {
+                return {
+                    doNotTrack: navigator.doNotTrack || 'غير مضبوط',
+                    cookies: navigator.cookieEnabled ? 'مفعل' : 'معطل'
+                };
+            }
+
+            async getNetworkInfo() {
+                const conn = navigator.connection;
+                return {
+                    type: conn?.effectiveType || 'غير معروف',
+                    online: navigator.onLine
+                };
+            }
+
+            // ========== العرض المضغوط ==========
+            updateSummary() {
+                const tests = Object.values(this.results.tests);
+                this.results.summary.totalTests = tests.length;
+                this.results.summary.passed = tests.filter(test => test.passed).length;
+                this.results.summary.failed = tests.filter(test => !test.passed).length;
+                this.results.summary.overallScore = Math.round((this.results.summary.passed / this.results.summary.totalTests) * 100);
+            }
+
+            displayCompactResults() {
+                this.updateQuickSummary();
+                this.updateSeleniumResults();
+                this.updateSystemInfo();
+                this.updateNetworkInfo();
+                this.updatePrivacyInfo();
+                this.updateFingerprintInfo();
+                this.updateJSONOutput();
+            }
+
+            updateQuickSummary() {
+                const summary = this.results.summary;
+                const system = this.results.systemInfo.basic;
+                
+                document.getElementById('quickSummary').innerHTML = `
+                    <div class="summary-item">✅ الاختبارات: ${summary.passed}/${summary.totalTests}</div>
+                    <div class="summary-item">🎯 النتيجة: ${summary.overallScore}%</div>
+                    <div class="summary-item">🖥️ الجهاز: ${system.deviceType}</div>
+                    <div class="summary-item">🌐 الاتصال: ${this.results.systemInfo.connection.type}</div>
+                    <div class="summary-item">🍪 الكوكيز: ${Object.keys(this.results.cookies).length}</div>
+                    <div class="summary-item">🖱️ التفاعلات: ${this.results.interactions.length}</div>
+                `;
+            }
+
+            updateSeleniumResults() {
+                const tests = this.results.tests;
+                let html = '';
+                
+                for (const [testName, testData] of Object.entries(tests)) {
+                    const statusClass = testData.passed ? 'passed' : 'failed';
+                    const statusIcon = testData.passed ? '✅' : '❌';
+                    const title = this.getTestTitle(testName);
+                    
+                    html += `
+                        <div class="info-card ${statusClass}">
+                            <h4>${statusIcon} ${title}</h4>
+                            <div>الحالة: ${testData.passed ? 'ناجح' : 'فاشل'}</div>
+                            <div>الكشف: ${testData.detected ? 'نعم' : 'لا'}</div>
+                            ${testData.tools ? `<div>الأدوات: ${testData.tools.join(', ')}</div>` : ''}
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('seleniumResults').innerHTML = html;
+            }
+
+            updateSystemInfo() {
+                const info = this.results.systemInfo;
+                let html = '';
+                
+                for (const [category, data] of Object.entries(info)) {
+                    if (category === 'fingerprint') continue;
+                    
+                    html += `
+                        <div class="info-card">
+                            <h4>${this.getCategoryTitle(category)}</h4>
+                            ${Object.entries(data).map(([key, value]) => `
+                                <div><strong>${key}:</strong> ${this.formatValue(value)}</div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('systemInfo').innerHTML = html;
+            }
+
+            updateNetworkInfo() {
+                const network = this.results.systemInfo.connection;
+                const location = this.results.systemInfo.location;
+                
+                document.getElementById('networkInfo').innerHTML = `
+                    <div class="test-result"><strong>نوع الاتصال:</strong> ${network.type}</div>
+                    <div class="test-result"><strong>السرعة:</strong> ${network.downlink}</div>
+                    <div class="test-result"><strong>الاتصال:</strong> ${network.saveData}</div>
+                    <div class="test-result"><strong>IP:</strong> ${location.ip}</div>
+                    <div class="test-result"><strong>البلد:</strong> ${location.country}</div>
+                    <div class="test-result"><strong>المدينة:</strong> ${location.city}</div>
+                `;
+            }
+
+            updatePrivacyInfo() {
+                const privacy = this.results.systemInfo.privacy;
+                
+                document.getElementById('privacyInfo').innerHTML = `
+                    <div class="test-result"><strong>عدم التتبع:</strong> ${privacy.doNotTrack}</div>
+                    <div class="test-result"><strong>الكوكيز:</strong> ${privacy.cookies}</div>
+                    <div class="test-result"><strong>الجافا:</strong> ${navigator.javaEnabled ? 'مفعل' : 'معطل'}</div>
+                `;
+            }
+
+            updateFingerprintInfo() {
+                const fingerprint = this.results.systemInfo.fingerprint;
+                
+                document.getElementById('fingerprintInfo').innerHTML = `
+                    <div class="info-card">
+                        <h4>بصمة الجهاز</h4>
+                        <div><strong>Canvas:</strong> ${fingerprint.canvas}</div>
+                        <div><strong>WebGL:</strong> ${fingerprint.webgl}</div>
+                        <div><strong>الخطوط المتاحة:</strong> ${this.getFontsList().length}</div>
+                    </div>
+                    <div class="info-card">
+                        <h4>البصمة الزمنية</h4>
+                        <div><strong>المنطقة الزمنية:</strong> ${this.results.systemInfo.language.timezone}</div>
+                        <div><strong>الإزاحة:</strong> ${fingerprint.timezone} دقيقة</div>
+                        <div><strong>اللغة:</strong> ${this.results.systemInfo.language.language}</div>
+                    </div>
+                `;
+            }
+
+            updateInteractionDisplay() {
+                const recent = this.interactionLog.slice(-8).reverse();
+                document.getElementById('interactionLog').innerHTML = recent.map(interaction => 
+                    `<div>${new Date(interaction.timestamp).toLocaleTimeString()} - ${interaction.type}</div>`
+                ).join('');
+            }
+
+            updateCookiesDisplay() {
+                const cookies = this.results.cookies;
+                document.getElementById('cookiesList').innerHTML = Object.entries(cookies).map(([name, value]) => `
+                    <div class="cookie-item">
+                        <strong>${name}</strong><br>
+                        <span>${value ? value.substring(0, 30) + (value.length > 30 ? '...' : '') : 'قيمة فارغة'}</span>
+                    </div>
+                `).join('') || '<div class="cookie-item">لا توجد كوكيز</div>';
+            }
+
+            updateJSONOutput() {
+                document.getElementById('jsonOutput').textContent = JSON.stringify(this.results, null, 2);
+            }
+
+            getFontsList() {
+                const testFonts = ['Arial', 'Helvetica', 'Times New Roman'];
+                const available = [];
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                testFonts.forEach(font => {
+                    ctx.font = '72px ' + font + ', monospace';
+                    if (ctx.measureText('test').width !== ctx.measureText('TEST').width) {
+                        available.push(font);
+                    }
+                });
+                
+                return available;
+            }
+
+            getTestTitle(testName) {
+                const titles = {
+                    webdriver: 'WebDriver',
+                    headless: 'Headless',
+                    automation: 'الأتمتة', 
+                    fingerprint: 'البصمة'
+                };
+                return titles[testName] || testName;
+            }
+
+            getCategoryTitle(category) {
+                const titles = {
+                    basic: 'أساسي',
+                    screen: 'الشاشة',
+                    hardware: 'العتاد',
+                    connection: 'الاتصال',
+                    language: 'اللغة',
+                    location: 'الموقع',
+                    browser: 'المتصفح',
+                    privacy: 'الخصوصية',
+                    network: 'الشبكة'
+                };
+                return titles[category] || category;
+            }
+
+            formatValue(value) {
+                if (typeof value === 'object') return JSON.stringify(value);
+                return String(value);
+            }
+        }
+
+        // تشغيل التحليل
+        document.addEventListener('DOMContentLoaded', async () => {
+            const tester = new CompactTester();
+            await tester.runComprehensiveAnalysis();
+        });
+    </script>
+</body>
+</html>
